@@ -22,16 +22,12 @@ export function MusicApp() {
   useEffect(() => {
     const saved = window.localStorage.getItem('nuestra-musica-cards')
     const savedFavorites = window.localStorage.getItem('nuestra-musica-favorites')
-    const savedAudioOverrides = window.localStorage.getItem('nuestra-musica-audio-overrides')
-    const audioOverrides = savedAudioOverrides ? JSON.parse(savedAudioOverrides) as Record<string, string> : {}
     if (saved) {
       try {
-        setSongs([...dedicatedSongs.map((song) => audioOverrides[song.id] ? { ...song, audioUrl: audioOverrides[song.id] } : song), ...JSON.parse(saved)])
+        setSongs([...dedicatedSongs, ...JSON.parse(saved)])
       } catch {
         window.localStorage.removeItem('nuestra-musica-cards')
       }
-    } else if (Object.keys(audioOverrides).length) {
-      setSongs(dedicatedSongs.map((song) => audioOverrides[song.id] ? { ...song, audioUrl: audioOverrides[song.id] } : song))
     }
     if (savedFavorites) setFavorites(new Set(JSON.parse(savedFavorites)))
     fetch('/api/cards')
@@ -49,7 +45,7 @@ export function MusicApp() {
           moment: card.moment || undefined,
           isDedicated: true,
         }))
-        setSongs([...dedicatedSongs.map((song) => audioOverrides[song.id] ? { ...song, audioUrl: audioOverrides[song.id] } : song), ...cloudSongs])
+        setSongs([...dedicatedSongs, ...cloudSongs])
         setCloudStatus('connected')
       })
       .catch(() => setCloudStatus('local'))
@@ -87,7 +83,12 @@ export function MusicApp() {
       setCloudStatus('connected')
       return
     }
-    const nextLocalSongs = [...songs.filter((song) => song.id.startsWith('local-')), track]
+    const localTrack = {
+      ...track,
+      audioUrl: URL.createObjectURL(files.audio),
+      artwork: files.artwork ? URL.createObjectURL(files.artwork) : track.artwork,
+    }
+    const nextLocalSongs = [...songs.filter((song) => song.id.startsWith('local-')), localTrack]
     saveLocalSongs(nextLocalSongs)
     setCloudStatus('local')
   }
@@ -104,19 +105,9 @@ export function MusicApp() {
         return
       }
     }
-    const reader = new FileReader()
-    reader.onload = () => {
-      const audioUrl = String(reader.result)
-      if (track.id.startsWith('local-')) {
-        saveLocalSongs(songs.filter((song) => song.id.startsWith('local-')).map((song) => song.id === track.id ? { ...song, audioUrl } : song))
-      } else {
-        const overrides = JSON.parse(window.localStorage.getItem('nuestra-musica-audio-overrides') || '{}') as Record<string, string>
-        overrides[track.id] = audioUrl
-        window.localStorage.setItem('nuestra-musica-audio-overrides', JSON.stringify(overrides))
-        setSongs((current) => current.map((song) => song.id === track.id ? { ...song, audioUrl } : song))
-      }
-    }
-    reader.readAsDataURL(file)
+    const audioUrl = URL.createObjectURL(file)
+    setSongs((current) => current.map((song) => song.id === track.id ? { ...song, audioUrl } : song))
+    setCloudStatus('local')
   }
 
   function toggleFavorite(id: string) {

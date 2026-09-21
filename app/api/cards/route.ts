@@ -4,8 +4,12 @@ import { isSupabaseConfigured, supabaseAdmin } from '@/lib/supabase-admin'
 const bucket = 'music-files'
 
 function unavailable() {
+  const missing = [
+    !process.env.NEXT_PUBLIC_SUPABASE_URL && 'NEXT_PUBLIC_SUPABASE_URL',
+    !process.env.SUPABASE_SERVICE_ROLE_KEY && 'SUPABASE_SERVICE_ROLE_KEY',
+  ].filter(Boolean)
   return NextResponse.json(
-    { error: 'Supabase no está configurado. Añade las variables de entorno.' },
+    { error: `Supabase no está configurado en este deployment. Falta: ${missing.join(', ')}.` },
     { status: 503 },
   )
 }

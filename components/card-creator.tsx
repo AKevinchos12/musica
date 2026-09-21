@@ -8,15 +8,6 @@ type CardCreatorProps = {
   onCreate: (track: Track, files: { audio: File; artwork?: File }) => void | Promise<void>
 }
 
-function readFile(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(String(reader.result))
-    reader.onerror = () => reject(reader.error)
-    reader.readAsDataURL(file)
-  })
-}
-
 export function CardCreator({ onCreate }: CardCreatorProps) {
   const [open, setOpen] = useState(false)
   const [title, setTitle] = useState('')
@@ -50,16 +41,12 @@ export function CardCreator({ onCreate }: CardCreatorProps) {
     setSaving(true)
     setError('')
     try {
-      const [audioUrl, artworkUrl] = await Promise.all([
-        readFile(audio),
-        artwork ? readFile(artwork) : Promise.resolve('/images/cover-1.png'),
-      ])
       await onCreate({
         id: `local-${Date.now()}`,
         title: title.trim(),
         artist: artist.trim() || 'Nuestra playlist',
-        artwork: artworkUrl,
-        audioUrl,
+        artwork: artwork ? URL.createObjectURL(artwork) : '/images/cover-1.png',
+        audioUrl: URL.createObjectURL(audio),
         isDedicated: true,
         dedication: dedication.trim() || undefined,
         lyrics: lyrics.trim() || undefined,
