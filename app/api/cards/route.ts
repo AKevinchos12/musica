@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { isSupabaseConfigured, supabaseAdmin } from '@/lib/supabase-admin'
 
 const bucket = 'music-files'
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 function requireAdmin(request: Request) {
   const key = request.headers.get('x-admin-key')
@@ -27,13 +28,14 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  if (!isSupabaseConfigured) return unavailable()
-  const form = await request.formData()
-  const audio = form.get('audio')
-  const artwork = form.get('artwork')
-  if (!(audio instanceof File)) return NextResponse.json({ error: 'Falta el audio.' }, { status: 400 })
+  try {
+    if (!isSupabaseConfigured) return unavailable()
+    const form = await request.formData()
+    const audio = form.get('audio')
+    const artwork = form.get('artwork')
+    if (!(audio instanceof File)) return NextResponse.json({ error: 'Falta el audio.' }, { status: 400 })
 
-  const id = crypto.randomUUID()
+    const id = crypto.randomUUID()
   const audioPath = `${id}/audio-${audio.name}`
   const audioUpload = await supabaseAdmin.storage.from(bucket).upload(audioPath, audio, { contentType: audio.type, upsert: false })
   if (audioUpload.error) return NextResponse.json({ error: audioUpload.error.message }, { status: 500 })
@@ -58,7 +60,10 @@ export async function POST(request: Request) {
   }
   const { data, error } = await supabaseAdmin.from('music_cards').insert(card).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ card: data }, { status: 201 })
+    return NextResponse.json({ card: data }, { status: 201 })
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Error inesperado al guardar la card.' }, { status: 500 })
+  }
 }
 
 export async function PATCH(request: Request) {
@@ -67,6 +72,7 @@ export async function PATCH(request: Request) {
   const form = await request.formData()
   const id = String(form.get('id') || '')
   if (!id) return NextResponse.json({ error: 'Falta el id de la card.' }, { status: 400 })
+  if (!uuidPattern.test(id)) return NextResponse.json({ error: 'Esta card inicial no existe en la base de datos.' }, { status: 404 })
   const updates: Record<string, string> = {}
   for (const key of ['title', 'artist', 'dedication', 'lyrics', 'moment']) {
     const value = form.get(key)
@@ -89,6 +95,7 @@ export async function DELETE(request: Request) {
   if (!requireAdmin(request)) return NextResponse.json({ error: 'Se requiere acceso de administrador.' }, { status: 401 })
   const id = new URL(request.url).searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'Falta el id de la card.' }, { status: 400 })
+  if (!uuidPattern.test(id)) return NextResponse.json({ ok: true, localOnly: true })
   const { error } = await supabaseAdmin.from('music_cards').delete().eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   await supabaseAdmin.storage.from(bucket).remove([`${id}`])

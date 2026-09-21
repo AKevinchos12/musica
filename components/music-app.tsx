@@ -20,13 +20,17 @@ export function MusicApp() {
   const [favorites, setFavorites] = useState<Set<string>>(new Set())
   const [cloudStatus, setCloudStatus] = useState<'checking' | 'connected' | 'local'>('checking')
   const [adminKey, setAdminKey] = useState('')
+  const [hiddenBaseIds, setHiddenBaseIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     const saved = window.localStorage.getItem('nuestra-musica-cards')
     const savedFavorites = window.localStorage.getItem('nuestra-musica-favorites')
+    const savedHidden = window.localStorage.getItem('nuestra-musica-hidden-base-cards')
+    const hiddenIds = savedHidden ? new Set<string>(JSON.parse(savedHidden)) : new Set<string>()
+    setHiddenBaseIds(hiddenIds)
     if (saved) {
       try {
-        setSongs([...dedicatedSongs, ...JSON.parse(saved)])
+        setSongs([...dedicatedSongs.filter((song) => !hiddenIds.has(song.id)), ...JSON.parse(saved)])
       } catch {
         window.localStorage.removeItem('nuestra-musica-cards')
       }
@@ -47,7 +51,7 @@ export function MusicApp() {
           moment: card.moment || undefined,
           isDedicated: true,
         }))
-        setSongs([...dedicatedSongs, ...cloudSongs])
+        setSongs([...dedicatedSongs.filter((song) => !hiddenIds.has(song.id)), ...cloudSongs])
         setCloudStatus('connected')
       })
       .catch(() => setCloudStatus('local'))
@@ -84,6 +88,10 @@ export function MusicApp() {
       setSongs((current) => [...current, cloudTrack])
       setCloudStatus('connected')
       return
+    }
+    if (response.status !== 503) {
+      const payload = await response.json().catch(() => ({ error: 'No se pudo guardar la card.' })) as { error?: string }
+      throw new Error(payload.error || 'No se pudo guardar la card en Supabase.')
     }
     const localTrack = {
       ...track,
@@ -128,6 +136,11 @@ export function MusicApp() {
       const response = await fetch(`/api/cards?id=${encodeURIComponent(id)}`, { method: 'DELETE', headers: { 'x-admin-key': adminKey } })
       if (!response.ok) return
       setSongs((current) => current.filter((song) => song.id !== id))
+      if (id.startsWith('ded-')) {
+        const nextHidden = new Set(hiddenBaseIds).add(id)
+        setHiddenBaseIds(nextHidden)
+        window.localStorage.setItem('nuestra-musica-hidden-base-cards', JSON.stringify([...nextHidden]))
+      }
     }
     if (favorites.has(id)) toggleFavorite(id)
   }
@@ -145,7 +158,9 @@ export function MusicApp() {
     form.append('title', title.trim())
     form.append('artist', artist.trim())
     const response = await fetch('/api/cards', { method: 'PATCH', body: form, headers: { 'x-admin-key': adminKey } })
-    if (response.ok) setSongs((current) => current.map((song) => song.id === track.id ? { ...song, title: title.trim(), artist: artist.trim() } : song))
+    if (response.ok || track.id.startsWith('ded-')) {
+      setSongs((current) => current.map((song) => song.id === track.id ? { ...song, title: title.trim(), artist: artist.trim() } : song))
+    }
   }
 
   async function loginAdmin(key: string) {
