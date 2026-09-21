@@ -9,9 +9,6 @@ export const giftConfig = {
   fromName: 'Yo',
   toName: 'Mi amor',
 
-  // Iniciales que aparecen en el logo (ej: "A & M")
-  initials: 'T & M',
-
   // Cuántos meses celebráis
   milestone: '9 meses',
 
