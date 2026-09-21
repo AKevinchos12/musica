@@ -18,6 +18,17 @@ NEXT_PUBLIC_SUPABASE_URL=https://TU-PROYECTO.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=tu-service-role-key
 ```
 
+En PowerShell no ejecutes esas líneas directamente como comandos. Puedes crear el archivo desde la terminal así, sustituyendo los valores:
+
+```powershell
+@"
+NEXT_PUBLIC_SUPABASE_URL=https://TU-PROYECTO.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=TU_SECRET_KEY
+"@ | Set-Content .env.local
+```
+
+Importante: en `Project Settings > API` copia la **Secret key** o la antigua `service_role key`. La clave `sb_publishable_...` es pública y no sirve para el cliente servidor que usa esta API. Nunca subas la secret key a GitHub.
+
 No publiques ni subas `.env.local` a Git. La `service_role key` solo se usa en el servidor.
 
 Reinicia el servidor:
