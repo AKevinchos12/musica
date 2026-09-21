@@ -11,26 +11,21 @@ import { MusicFeatures } from '@/components/music-features'
 import { SearchView } from '@/components/search-view'
 import { WelcomeScreen } from '@/components/welcome-screen'
 import { giftConfig } from '@/lib/config'
-import { dedicatedSongs } from '@/lib/dedicated-songs'
 import type { Track } from '@/lib/types'
 
 export function MusicApp() {
   const [entered, setEntered] = useState(false)
-  const [songs, setSongs] = useState(dedicatedSongs)
+  const [songs, setSongs] = useState<Track[]>([])
   const [favorites, setFavorites] = useState<Set<string>>(new Set())
   const [cloudStatus, setCloudStatus] = useState<'checking' | 'connected' | 'local'>('checking')
   const [adminKey, setAdminKey] = useState('')
-  const [hiddenBaseIds, setHiddenBaseIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     const saved = window.localStorage.getItem('nuestra-musica-cards')
     const savedFavorites = window.localStorage.getItem('nuestra-musica-favorites')
-    const savedHidden = window.localStorage.getItem('nuestra-musica-hidden-base-cards')
-    const hiddenIds = savedHidden ? new Set<string>(JSON.parse(savedHidden)) : new Set<string>()
-    setHiddenBaseIds(hiddenIds)
     if (saved) {
       try {
-        setSongs([...dedicatedSongs.filter((song) => !hiddenIds.has(song.id)), ...JSON.parse(saved)])
+        setSongs(JSON.parse(saved))
       } catch {
         window.localStorage.removeItem('nuestra-musica-cards')
       }
@@ -51,14 +46,14 @@ export function MusicApp() {
           moment: card.moment || undefined,
           isDedicated: true,
         }))
-        setSongs([...dedicatedSongs.filter((song) => !hiddenIds.has(song.id)), ...cloudSongs])
+        setSongs((current) => [...current.filter((song) => song.id.startsWith('local-')), ...cloudSongs])
         setCloudStatus('connected')
       })
       .catch(() => setCloudStatus('local'))
   }, [])
 
   function saveLocalSongs(nextSongs: Track[]) {
-    setSongs([...dedicatedSongs, ...nextSongs])
+    setSongs((current) => [...current.filter((song) => !song.id.startsWith('local-')), ...nextSongs])
     window.localStorage.setItem('nuestra-musica-cards', JSON.stringify(nextSongs))
   }
 
@@ -136,11 +131,6 @@ export function MusicApp() {
       const response = await fetch(`/api/cards?id=${encodeURIComponent(id)}`, { method: 'DELETE', headers: { 'x-admin-key': adminKey } })
       if (!response.ok) return
       setSongs((current) => current.filter((song) => song.id !== id))
-      if (id.startsWith('ded-')) {
-        const nextHidden = new Set(hiddenBaseIds).add(id)
-        setHiddenBaseIds(nextHidden)
-        window.localStorage.setItem('nuestra-musica-hidden-base-cards', JSON.stringify([...nextHidden]))
-      }
     }
     if (favorites.has(id)) toggleFavorite(id)
   }
@@ -158,7 +148,7 @@ export function MusicApp() {
     form.append('title', title.trim())
     form.append('artist', artist.trim())
     const response = await fetch('/api/cards', { method: 'PATCH', body: form, headers: { 'x-admin-key': adminKey } })
-    if (response.ok || track.id.startsWith('ded-')) {
+    if (response.ok) {
       setSongs((current) => current.map((song) => song.id === track.id ? { ...song, title: title.trim(), artist: artist.trim() } : song))
     }
   }
@@ -182,6 +172,9 @@ export function MusicApp() {
             <div className="flex items-center gap-2.5">
               <span className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
                 <Library className="size-4" />
+              </span>
+              <span className="font-serif text-lg font-medium tracking-tight text-foreground">
+                {giftConfig.initials}
               </span>
             </div>
             <span className="flex items-center gap-2 rounded-full border border-border px-3 py-1 font-mono text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
