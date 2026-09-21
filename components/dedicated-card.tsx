@@ -6,7 +6,7 @@ import { usePlayer } from '@/components/player-provider'
 import { Equalizer } from '@/components/equalizer'
 import type { Track } from '@/lib/types'
 
-export function DedicatedCard({ track, queue, isFavorite, onToggleFavorite, onEdit, onDelete, onAttachAudio }: { track: Track; queue: Track[]; isFavorite: boolean; onToggleFavorite: () => void; onEdit: () => void; onDelete: () => void; onAttachAudio: (file: File) => void }) {
+export function DedicatedCard({ track, queue, isFavorite, isAdmin, onToggleFavorite, onEdit, onDelete, onAttachAudio }: { track: Track; queue: Track[]; isFavorite: boolean; isAdmin: boolean; onToggleFavorite: () => void; onEdit: () => void; onDelete: () => void; onAttachAudio: (file: File) => void }) {
   const { current, isPlaying, play } = usePlayer()
   const audioInput = useRef<HTMLInputElement>(null)
   const isCurrent = current?.id === track.id
@@ -55,10 +55,10 @@ export function DedicatedCard({ track, queue, isFavorite, onToggleFavorite, onEd
         </p>
       )}
       <div className="mt-3 flex items-center justify-end gap-1 border-t border-border/60 pt-2">
-        <button type="button" onClick={() => audioInput.current?.click()} aria-label={`Añadir audio a ${track.title}`} className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"><Upload className="size-3.5" /></button>
-        <input ref={audioInput} type="file" accept="audio/*" className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; if (file) onAttachAudio(file); event.currentTarget.value = '' }} />
-        {track.id.startsWith('local-') && <button type="button" onClick={onEdit} aria-label={`Editar ${track.title}`} className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"><Pencil className="size-3.5" /></button>}
-        {track.id.startsWith('local-') && <button type="button" onClick={onDelete} aria-label={`Eliminar ${track.title}`} className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"><Trash2 className="size-3.5" /></button>}
+        {isAdmin && <button type="button" onClick={() => audioInput.current?.click()} aria-label={`Añadir audio a ${track.title}`} className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"><Upload className="size-3.5" /></button>}
+        {isAdmin && <input ref={audioInput} type="file" accept="audio/*" className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; if (file) onAttachAudio(file); event.currentTarget.value = '' }} />}
+        {isAdmin && <button type="button" onClick={onEdit} aria-label={`Editar ${track.title}`} className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"><Pencil className="size-3.5" /></button>}
+        {isAdmin && <button type="button" onClick={onDelete} aria-label={`Eliminar ${track.title}`} className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"><Trash2 className="size-3.5" /></button>}
       </div>
     </article>
   )

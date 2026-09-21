@@ -3,6 +3,7 @@
 import { Heart, Library, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { CardCreator } from '@/components/card-creator'
+import { AdminPanel } from '@/components/admin-panel'
 import { DedicatedCard } from '@/components/dedicated-card'
 import { PlayerBar } from '@/components/player-bar'
 import { PlayerProvider } from '@/components/player-provider'
@@ -18,6 +19,7 @@ export function MusicApp() {
   const [songs, setSongs] = useState(dedicatedSongs)
   const [favorites, setFavorites] = useState<Set<string>>(new Set())
   const [cloudStatus, setCloudStatus] = useState<'checking' | 'connected' | 'local'>('checking')
+  const [adminKey, setAdminKey] = useState('')
 
   useEffect(() => {
     const saved = window.localStorage.getItem('nuestra-musica-cards')
@@ -98,7 +100,7 @@ export function MusicApp() {
       const form = new FormData()
       form.append('id', track.id)
       form.append('audio', file)
-      const response = await fetch('/api/cards', { method: 'PATCH', body: form })
+      const response = await fetch('/api/cards', { method: 'PATCH', body: form, headers: { 'x-admin-key': adminKey } })
       if (response.ok) {
         const payload = await response.json() as { card: Record<string, string> }
         setSongs((current) => current.map((song) => song.id === track.id ? { ...song, audioUrl: payload.card.audio_url } : song))
@@ -123,7 +125,7 @@ export function MusicApp() {
     if (id.startsWith('local-')) {
       saveLocalSongs(songs.filter((song) => song.id.startsWith('local-') && song.id !== id))
     } else {
-      const response = await fetch(`/api/cards?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+      const response = await fetch(`/api/cards?id=${encodeURIComponent(id)}`, { method: 'DELETE', headers: { 'x-admin-key': adminKey } })
       if (!response.ok) return
       setSongs((current) => current.filter((song) => song.id !== id))
     }
@@ -142,8 +144,16 @@ export function MusicApp() {
     form.append('id', track.id)
     form.append('title', title.trim())
     form.append('artist', artist.trim())
-    const response = await fetch('/api/cards', { method: 'PATCH', body: form })
+    const response = await fetch('/api/cards', { method: 'PATCH', body: form, headers: { 'x-admin-key': adminKey } })
     if (response.ok) setSongs((current) => current.map((song) => song.id === track.id ? { ...song, title: title.trim(), artist: artist.trim() } : song))
+  }
+
+  async function loginAdmin(key: string) {
+    const response = await fetch('/api/admin/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key }) })
+    if (!response.ok) return false
+    const payload = await response.json() as { ok: boolean }
+    if (payload.ok) setAdminKey(key)
+    return payload.ok
   }
 
   return (
@@ -166,6 +176,7 @@ export function MusicApp() {
               <span className={`size-1.5 rounded-full ${cloudStatus === 'connected' ? 'bg-emerald-400' : 'bg-primary'}`} />
               {cloudStatus === 'connected' ? 'En la nube' : giftConfig.milestone}
             </span>
+            <AdminPanel isAdmin={Boolean(adminKey)} onLogin={loginAdmin} onLogout={() => setAdminKey('')} />
           </div>
         </header>
 
@@ -200,7 +211,7 @@ export function MusicApp() {
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
               {songs.map((track) => (
-                <DedicatedCard key={track.id} track={track} queue={songs} isFavorite={favorites.has(track.id)} onToggleFavorite={() => toggleFavorite(track.id)} onEdit={() => editSong(track)} onDelete={() => deleteSong(track.id)} onAttachAudio={(file) => void attachAudio(track, file)} />
+                <DedicatedCard key={track.id} track={track} queue={songs} isFavorite={favorites.has(track.id)} isAdmin={Boolean(adminKey)} onToggleFavorite={() => toggleFavorite(track.id)} onEdit={() => editSong(track)} onDelete={() => deleteSong(track.id)} onAttachAudio={(file) => void attachAudio(track, file)} />
               ))}
             </div>
           </section>

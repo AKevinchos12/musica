@@ -16,6 +16,7 @@ Crea un archivo `.env.local` en la raíz del proyecto:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://TU-PROYECTO.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=tu-service-role-key
+ADMIN_KEY=crea-una-clave-larga-y-privada
 ```
 
 En PowerShell no ejecutes esas líneas directamente como comandos. Puedes crear el archivo desde la terminal así, sustituyendo los valores:
@@ -24,6 +25,7 @@ En PowerShell no ejecutes esas líneas directamente como comandos. Puedes crear 
 @"
 NEXT_PUBLIC_SUPABASE_URL=https://TU-PROYECTO.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=TU_SECRET_KEY
+ADMIN_KEY=TU_CLAVE_PRIVADA_DE_ADMIN
 "@ | Set-Content .env.local
 ```
 
@@ -38,6 +40,8 @@ pnpm dev
 ```
 
 En la cabecera aparecerá `En la nube` cuando la API responda correctamente.
+
+`ADMIN_KEY` protege el panel y las operaciones de editar, borrar o cambiar audio. Usa una clave larga distinta de la de Supabase y añádela también en Vercel.
 
 ## 3. Crear una card nueva
 
@@ -68,6 +72,7 @@ GitHub guarda el código y Vercel publica la aplicación de Next.js.
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://TU-PROYECTO.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=tu-service-role-key
+ADMIN_KEY=tu-clave-privada-de-admin
 ```
 
 5. Pulsa `Deploy`. Cada push posterior a la rama principal publicará una nueva versión automáticamente.

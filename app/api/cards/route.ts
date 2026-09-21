@@ -3,6 +3,11 @@ import { isSupabaseConfigured, supabaseAdmin } from '@/lib/supabase-admin'
 
 const bucket = 'music-files'
 
+function requireAdmin(request: Request) {
+  const key = request.headers.get('x-admin-key')
+  return Boolean(process.env.ADMIN_KEY && key && key === process.env.ADMIN_KEY)
+}
+
 function unavailable() {
   const missing = [
     !process.env.NEXT_PUBLIC_SUPABASE_URL && 'NEXT_PUBLIC_SUPABASE_URL',
@@ -58,6 +63,7 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   if (!isSupabaseConfigured) return unavailable()
+  if (!requireAdmin(request)) return NextResponse.json({ error: 'Se requiere acceso de administrador.' }, { status: 401 })
   const form = await request.formData()
   const id = String(form.get('id') || '')
   if (!id) return NextResponse.json({ error: 'Falta el id de la card.' }, { status: 400 })
@@ -80,6 +86,7 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   if (!isSupabaseConfigured) return unavailable()
+  if (!requireAdmin(request)) return NextResponse.json({ error: 'Se requiere acceso de administrador.' }, { status: 401 })
   const id = new URL(request.url).searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'Falta el id de la card.' }, { status: 400 })
   const { error } = await supabaseAdmin.from('music_cards').delete().eq('id', id)
